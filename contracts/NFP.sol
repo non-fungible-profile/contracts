@@ -1,6 +1,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 error MaximumSupplyReached();
@@ -16,6 +17,9 @@ error WhitelistMerkleRootNotSet();
 error AlreadyClaimed();
 error InvalidMerkleProof();
 error AmountTooHigh();
+error TokenNotOwned();
+error InvalidERC721();
+error InvalidERC1155();
 
 /**
  * @title NFP
@@ -36,6 +40,11 @@ contract NFP is ERC721 {
         uint256 whitelist;
     }
 
+    struct Foreground {
+        address token;
+        uint256 id;
+    }
+
     struct Minter {
         uint256 paid;
         bool free;
@@ -49,6 +58,7 @@ contract NFP is ERC721 {
     Minted public minted;
     Mintable public mintable;
     mapping(address => Minter) public minter;
+    mapping(uint256 => Foreground) public foreground;
 
     event OwnershipTransferred(address previousOwner, address newOwner);
     event PaidMintingCostUpdated(
@@ -59,6 +69,11 @@ contract NFP is ERC721 {
     event WhitelistMerkleRootUpdated(
         bytes32 oldWhitelistMerkleRoot,
         bytes32 newWhitelistMerkleRoot
+    );
+    event SetForegroundNFT(
+        uint256 id,
+        address foregroundToken,
+        uint256 foregroundId
     );
 
     constructor(
@@ -111,6 +126,41 @@ contract NFP is ERC721 {
         _mint(msg.sender, _tokenId);
         minted.free++;
         _minter.free = true;
+    }
+
+    function setForegroundERC721(
+        uint256 _id,
+        address _erc721,
+        uint256 _erc721Id
+    ) external {
+        if (ownerOf(_id) != msg.sender) revert TokenNotOwned();
+        if (IERC721(_erc721).ownerOf(_erc721Id) != msg.sender)
+            revert InvalidERC721();
+        foreground[_id].token = _erc721;
+        foreground[_id].id = _erc721Id;
+        emit SetForegroundNFT(_id, _erc721, _erc721Id);
+    }
+
+    function setForegroundERC1155(
+        uint256 _id,
+        address _erc1155,
+        uint256 _erc1155Id
+    ) external {
+        if (ownerOf(_id) != msg.sender) revert TokenNotOwned();
+        if (IERC1155(_erc1155).balanceOf(msg.sender, _erc1155Id) == 0)
+            revert InvalidERC1155();
+        foreground[_id].token = _erc1155;
+        foreground[_id].id = _erc1155Id;
+        emit SetForegroundNFT(_id, _erc1155, _erc1155Id);
+    }
+
+    function _beforeTokenTransfer(
+        address,
+        address,
+        uint256 _tokenId
+    ) internal override {
+        foreground[_tokenId].token = address(0);
+        foreground[_tokenId].id = 0;
     }
 
     function paidMint(uint256 _amount) external payable {
