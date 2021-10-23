@@ -106,9 +106,8 @@ contract NFP is ERC721 {
         Minter storage _minter = minter[msg.sender];
         if (_minter.free) revert MintingLimitReached();
         if (minted.free == mintable.free) revert MaximumSupplyReached();
-        // TODO: test that increment is done after assigning the old value to the var
         uint256 _tokenId = tokenIdTracker++;
-        _safeMint(msg.sender, _tokenId);
+        _mint(msg.sender, _tokenId);
         minted.free++;
         _minter.free = true;
     }
@@ -119,7 +118,7 @@ contract NFP is ERC721 {
         Minter storage _minter = minter[msg.sender];
         if (_minter.paid == 3) revert MintingLimitReached();
         uint256 _tokenId = tokenIdTracker++;
-        _safeMint(msg.sender, _tokenId);
+        _mint(msg.sender, _tokenId);
         minted.paid++;
         _minter.paid++;
     }
@@ -133,7 +132,7 @@ contract NFP is ERC721 {
         if (!MerkleProof.verify(_proof, whitelistMerkleRoot, _leaf))
             revert InvalidMerkleProof();
         uint256 _tokenId = tokenIdTracker++;
-        _safeMint(msg.sender, _tokenId);
+        _mint(msg.sender, _tokenId);
         minted.whitelist++;
         _minter.whitelist = true;
         emit Transfer(address(0), msg.sender, _tokenId);
