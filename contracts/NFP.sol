@@ -15,6 +15,7 @@ error MintingLimitReached();
 error WhitelistMerkleRootNotSet();
 error AlreadyClaimed();
 error InvalidMerkleProof();
+error AmountTooHigh();
 
 /**
  * @title NFP
@@ -47,7 +48,7 @@ contract NFP is ERC721 {
     bytes32 internal whitelistMerkleRoot;
     Minted public minted;
     Mintable public mintable;
-    mapping(address => Minter) internal minter;
+    mapping(address => Minter) public minter;
 
     event OwnershipTransferred(address previousOwner, address newOwner);
     event PaidMintingCostUpdated(
@@ -112,15 +113,17 @@ contract NFP is ERC721 {
         _minter.free = true;
     }
 
-    function paidMint() external payable {
+    function paidMint(uint256 _amount) external payable {
         if (minted.paid == mintable.paid) revert MaximumSupplyReached();
         if (msg.value < paidMintingCost) revert NotEnoughNativeCurrency();
         Minter storage _minter = minter[msg.sender];
+        if (_amount + _minter.paid > 3) revert AmountTooHigh();
         if (_minter.paid == 3) revert MintingLimitReached();
-        uint256 _tokenId = tokenIdTracker++;
-        _mint(msg.sender, _tokenId);
-        minted.paid++;
-        _minter.paid++;
+        for (uint256 _i = 0; _i < _amount; _i++) {
+            _mint(msg.sender, tokenIdTracker++);
+            minted.paid++;
+            _minter.paid++;
+        }
     }
 
     function whitelistedMint(bytes32[] calldata _proof) external payable {
