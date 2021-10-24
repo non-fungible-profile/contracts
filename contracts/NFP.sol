@@ -177,7 +177,8 @@ contract NFP is ERC721 {
 
     function paidMint(uint256 _amount) external payable {
         if (minted.paid == mintable.paid) revert MaximumSupplyReached();
-        if (msg.value < paidMintingCost) revert NotEnoughNativeCurrency();
+        if (msg.value < paidMintingCost * _amount)
+            revert NotEnoughNativeCurrency();
         Minter storage _minter = minter[msg.sender];
         if (_amount + _minter.paid > 3) revert AmountTooHigh();
         if (_minter.paid == 3) revert MintingLimitReached();
@@ -196,11 +197,9 @@ contract NFP is ERC721 {
         bytes32 _leaf = keccak256(abi.encodePacked(msg.sender));
         if (!MerkleProof.verify(_proof, whitelistMerkleRoot, _leaf))
             revert InvalidMerkleProof();
-        uint256 _tokenId = tokenIdTracker++;
-        _mint(msg.sender, _tokenId);
+        _mint(msg.sender, tokenIdTracker++);
         minted.whitelist++;
         _minter.whitelist = true;
-        emit Transfer(address(0), msg.sender, _tokenId);
     }
 
     function withdrawNativeCurrency() external {
