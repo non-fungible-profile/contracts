@@ -20,6 +20,7 @@ error AmountTooHigh();
 error TokenNotOwned();
 error InvalidERC721();
 error InvalidERC1155();
+error InvalidBaseUri();
 
 /**
  * @title NFP
@@ -55,6 +56,7 @@ contract NFP is ERC721 {
     uint256 public paidMintingCost;
     uint256 internal tokenIdTracker;
     bytes32 internal whitelistMerkleRoot;
+    string public baseUri;
     Minted public minted;
     Mintable public mintable;
     mapping(address => Minter) public minter;
@@ -75,6 +77,7 @@ contract NFP is ERC721 {
         address foregroundToken,
         uint256 foregroundId
     );
+    event BaseUriUpdated(string oldBaseUri, string newBaseUri);
 
     constructor(
         string memory _name,
@@ -82,13 +85,16 @@ contract NFP is ERC721 {
         uint256 _paidMintingCost,
         uint256 _freeMintable,
         uint256 _paidMintable,
-        uint256 _whitelistMintable
+        uint256 _whitelistMintable,
+        string memory _baseUri
     ) ERC721(_name, _symbol) {
         if (_freeMintable + _whitelistMintable + _paidMintable == 0)
             revert ZeroMaximumSupply();
         if (_paidMintingCost == 0) revert ZeroPaidMintingCost();
+        if (bytes(_baseUri).length == 0) revert InvalidBaseUri();
         owner = msg.sender;
         paidMintingCost = _paidMintingCost;
+        baseUri = _baseUri;
         mintable = Mintable({
             paid: _paidMintable,
             free: _freeMintable,
@@ -116,6 +122,12 @@ contract NFP is ERC721 {
             _newWhitelistMerkleRoot
         );
         whitelistMerkleRoot = _newWhitelistMerkleRoot;
+    }
+
+    function setBaseUri(string calldata _newBaseUri) external {
+        if (msg.sender != owner) revert Forbidden();
+        emit BaseUriUpdated(baseUri, _newBaseUri);
+        baseUri = _newBaseUri;
     }
 
     function freeMint() external {
@@ -199,7 +211,7 @@ contract NFP is ERC721 {
         emit Withdrawn(_nativeCurrencyAmount);
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "https://test.io/";
+    function _baseURI() internal view override returns (string memory) {
+        return baseUri;
     }
 }

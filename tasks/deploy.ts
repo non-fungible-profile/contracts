@@ -8,6 +8,7 @@ interface TaskArguments {
     freeMintable: string;
     paidMintable: string;
     whitelistMintable: string;
+    baseUri: string;
 }
 
 task(
@@ -24,6 +25,7 @@ task(
         "whitelistMintable",
         "The amount of NFPs mintable through whitelisting."
     )
+    .addParam("baseUri", "The initial base URI.")
     .addFlag(
         "verify",
         "Additional (and optional) Etherscan contracts verification"
@@ -36,6 +38,7 @@ task(
                 freeMintable,
                 paidMintable,
                 whitelistMintable,
+                baseUri,
             }: TaskArguments,
             hre: HardhatRuntimeEnvironment
         ) => {
@@ -49,9 +52,11 @@ task(
                 parseEther(nativeCurrencyCost),
                 freeMintable,
                 paidMintable,
-                whitelistMintable
+                whitelistMintable,
+                baseUri
             );
             await nfp.deployed();
+            console.log(`Used ${nfp.deployTransaction.gasLimit} gas`);
 
             if (verify) {
                 await new Promise((resolve) => {
@@ -69,6 +74,7 @@ task(
                         freeMintable,
                         paidMintable,
                         whitelistMintable,
+                        baseUri,
                     ],
                 });
 
